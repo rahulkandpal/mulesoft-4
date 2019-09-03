@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="a5c777a1-61cc-4022-9d89-c2bd5bba1574" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Mule_DB" doc:name="Database Config" doc:id="9e2b4f9a-029f-46c9-91d1-b68054bcdbc6" >
+		<db:my-sql-connection host="mudb.mulesoft-training.com" port="3306" user="mule" password="mule" database="training" />
+	</db:config>
+	<db:config name="Local_DB" doc:name="Database Config" doc:id="07db6b18-eb14-4476-9470-2fde26baace5" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="root" database="test" />
+	</db:config>
+	<flow name="db-2-db-transferFlow" doc:id="3d0b4121-9a7f-4cfc-be80-db6076e596ad" >
+		<http:listener doc:name="Listener" doc:id="4e190cc0-080e-42cc-986a-06829b4b0483" config-ref="HTTP_Listener_config" path="/startSync"/>
+		<db:select doc:name="muledatabase" doc:id="b42ba26d-3131-4fd8-9131-298e3856910c" config-ref="Mule_DB">
+			<db:sql >select * from banking_customer</db:sql>
+		</db:select>
+		<db:bulk-insert doc:name="Bulk insert" doc:id="43274e22-95eb-4464-8655-572b3c96b657" config-ref="Local_DB">
+			<db:sql >insert into back_up values (:customer_id,:firstName,:lastName)</db:sql>
+		</db:bulk-insert>
+		<set-payload value="Sync Complete" doc:name="Set Payload" doc:id="df8373b7-7ba1-4ea5-80fd-ea732753f033" />
+	</flow>
+</mule>
