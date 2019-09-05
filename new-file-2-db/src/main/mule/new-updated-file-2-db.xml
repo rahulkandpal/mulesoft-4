@@ -17,7 +17,7 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 		<file:connection workingDir="E:\Mulesoft\Mule 4\MUFundamentals4.1_studentFiles_22sept2018\resources" />
 	</file:config>
 	<flow name="file-to-db" doc:id="c3195b14-33db-4eb7-ae71-5214958003e6" initialState="started">
-		<file:listener doc:name="On New or Updated File" doc:id="19d64d0d-7473-475a-b076-77d5cb1dff3b" config-ref="File_Config" directory="input" watermarkMode="CREATED_TIMESTAMP">
+		<file:listener doc:name="On New or Updated File" doc:id="19d64d0d-7473-475a-b076-77d5cb1dff3b" config-ref="File_Config" directory="input" watermarkMode="CREATED_TIMESTAMP" moveToDirectory="output" renameTo="#['accounts_' ++ (now() as String {format: &quot;MMddyyyy&quot;}) ++ '.csv']">
 			<scheduling-strategy >
 				<fixed-frequency frequency="60000"/>
 			</scheduling-strategy>
