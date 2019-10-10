@@ -35,7 +35,7 @@
 					      <uri>https://anypoint.mulesoft.com</uri>
 					      <muleVersion>${app.runtime}</muleVersion>
 					      <username>rkandpal5</username>
-					      <password>${password}</password>
+					      <password>*rk</password>
 					      <applicationName>${cloudhub.application.name}</applicationName>
 					      <environment>${environment}</environment>
 					      <properties>
