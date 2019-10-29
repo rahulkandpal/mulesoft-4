@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+	xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="00b31c61-6f7e-423f-b9e2-bd70ad11ed9d" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="3a0b6fbf-72bb-435a-b0d6-3837eacc267f" file="config.yaml" />
+	<email:smtp-config name="Email_SMTP" doc:name="Email SMTP" doc:id="4ce9262d-5717-4ffb-b832-6eb3e7a6b160" >
+		<email:smtps-connection host="smtp.gmail.com" user="abc@gmail.com" password="123456" >
+			<tls:context>
+            <tls:trust-store insecure="true"/>
+        </tls:context>
+		</email:smtps-connection>
+	</email:smtp-config>
+	<flow doc:id="0dd159b6-ccb0-4fe3-bdfd-971712a1acb4" name="demoFlow">
+		<http:listener doc:name="Listener" doc:id="86a471b5-0388-49c2-9c9c-6d8595775efe" config-ref="HTTP_Listener_config" path="/maillist"/>
+		<ee:transform doc:name="Transform Message" doc:id="c505c9aa-2e87-4dcf-ae30-62b8b7f09328" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.maillist.*mail]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<foreach doc:name="For Each" doc:id="62375366-d050-45e5-887b-a03b8bd78b79" collection='#[payload]'>
+			<email:send doc:name="Send" doc:id="b35cb1cb-63d0-4b98-8118-1de3988ac026" config-ref="Email_SMTP" fromAddress="rkandpal.47@gmail.com" subject="#[payload.subject]">
+				<email:to-addresses >
+					<email:to-address value="#[payload.to]" />
+				</email:to-addresses>
+				<email:body contentType="text/plain">
+					<email:content ><![CDATA[#[payload.message]]]></email:content>
+				</email:body>
+			</email:send>
+		</foreach>
+	</flow>
+</mule>

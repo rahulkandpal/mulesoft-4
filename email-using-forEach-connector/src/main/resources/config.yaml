@@ -1,0 +1,9 @@
+delta:
+  wsdl: "http://mu.learn.mulesoft.com/delta?wsdl"
+  service: "TicketServiceService"
+  port: "TicketServicePort"
+  
+american:
+  host: "training4-american-ws.cloudhub.io"
+  port: "80"
+  path: "/api/flight"
