@@ -1,0 +1,26 @@
+Step 1:  Update the Email id and password
+
+Step 2:  change the setting for the email id to allow less secure apps
+
+Step 3:  Use the  below format in the post Request
+
+----------------------------
+
+<?xml version="1.0" encoding="UTF-8"?>
+	<maillist>
+		<mail>
+			<subject>Test Mail - 1</subject>
+			<to>xyz@gmail.com</to>
+			<message>Hi. Your ID is 1</message>
+		</mail>
+		<mail>
+			<subject>Test Mail - 2</subject>
+			<to>xyz@gmail.com</to>
+			<message>Hi. Your ID is 2</message>
+		</mail>
+		<mail>
+			<subject>Test Mail - 3</subject>
+			<to>xyz@gmail.com</to>
+			<message>Hi. Your ID is 3</message>
+		</mail>
+	</maillist>
