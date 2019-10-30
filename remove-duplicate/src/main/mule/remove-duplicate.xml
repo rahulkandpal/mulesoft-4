@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<file:config name="File_Config" doc:name="File Config" doc:id="60f4f98f-4f1d-48de-b211-ccfdf10b42d9" >
+		<file:connection workingDir="C:\Users\Rahul\Downloads" />
+	</file:config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="4a3387d6-696d-4871-b449-7cd97a50162c" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="remove-duplicateFlow" doc:id="0d5eb838-84c4-46ab-948b-3bfb6063b828" >
+		<http:listener doc:name="Listener" doc:id="15697c21-b392-47fb-be0e-0ab76d5700dc" config-ref="HTTP_Listener_config" path="/getDetails"/>
+		<file:read doc:name="Read" doc:id="48ef642b-da56-440f-99c7-a8d2455b0cd8" config-ref="File_Config" path="C:\Users\Rahul\Downloads\annual-enterprise-survey-2018.csv"/>
+		<ee:transform doc:name="Transform Message" doc:id="1a4daf7b-8206-467f-bd28-72c0900d4002" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload distinctBy $]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
