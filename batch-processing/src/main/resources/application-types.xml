@@ -1,0 +1,59 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<types:mule xmlns:types="http://www.mulesoft.org/schema/mule/types">
+  <types:catalog>
+    <types:type name="sample-csv" format="csv">
+      <types:shape format="weave" example="examples/annual-enterprise-survey-2018.csv"><![CDATA[%dw 2.0
+type sample_csv = Array<{|
+  Year: String, 
+  Industry_aggregation_NZSIOC: String, 
+  Industry_code_NZSIOC: String, 
+  Industry_name_NZSIOC: String, 
+  Units: String, 
+  Variable_code: String, 
+  Variable_name: String, 
+  Variable_category: String, 
+  Value: String, 
+  Industry_code_ANZSIC06: String
+|}> {"MetadataFormat": "csv"}
+
+]]></types:shape>
+      <types:properties>
+        <types:property name="headerLineNumber" value="0"/>
+        <types:property name="header" value="false"/>
+        <types:property name="isQuotedString" value="false"/>
+      </types:properties>
+    </types:type>
+    <types:type name="sample-json" format="json">
+      <types:shape format="weave" example="examples/sample.json"><![CDATA[%dw 2.0
+type sample_json = {|
+  Year: Number {"typeId": "int"}, 
+  Industry_aggregation_NZSIOC: String, 
+  Industry_code_NZSIOC: Number {"typeId": "int"}, 
+  Industry_name_NZSIOC: String, 
+  Units: String, 
+  Variable_code: String, 
+  Variable_name: String, 
+  Variable_category: String, 
+  Value: Number {"typeId": "int"}, 
+  Industry_code_ANZSIC06: String
+|} {"MetadataFormat": "json",
+"example": "{\"Year\":2018,\"Industry_aggregation_NZSIOC\":\"Level 1\",\"Industry_code_NZSIOC\":99999,\"Industry_name_NZSIOC\":\"All industries\",\"Units\":\"Dollars (millions)\",\"Variable_code\":\"H01\",\"Variable_name\":\"Total income\",\"Variable_category\":\"Financial performance\",\"Value\":691859,\"Industry_code_ANZSIC06\":\"ANZSIC06 divisions A-S (excluding classes K6330, L6711, O7552, O760, O771, O772, S9540, S9601, S9602, and S9603)\"}"}
+
+]]></types:shape>
+    </types:type>
+  </types:catalog>
+  <types:enrichment select="#99150649-5103-4fcb-aadf-fdb3ca484029">
+    <types:processor-declaration>
+      <types:input-event>
+        <types:message>
+          <types:payload type="sample-csv"/>
+        </types:message>
+      </types:input-event>
+      <types:output-event>
+        <types:message>
+          <types:payload type="sample-json[]"/>
+        </types:message>
+      </types:output-event>
+    </types:processor-declaration>
+  </types:enrichment>
+</types:mule>

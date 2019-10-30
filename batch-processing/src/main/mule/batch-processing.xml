@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<file:config name="File_Config" doc:name="File Config" doc:id="277f6358-9013-46c8-b5ad-d58c57dc95a7" >
+		<file:connection workingDir="E:\files\batch" />
+	</file:config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="3f18d95d-65ea-4711-9863-508920b64fe6" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="root" database="test" />
+	</db:config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="84e667d4-fdef-4592-b7db-fe23250cd4be" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="batch-processingFlow1" doc:id="1eca40e3-81e1-4222-8519-f425e9f14b83" >
+		<file:listener doc:name="On New or Updated File" doc:id="6b1f4aee-2b5a-4664-862d-056bb3208511" config-ref="File_Config" moveToDirectory="E:\files\processed" autoDelete="true" renameTo="#[(now() as String {format:&quot;MMddyyyy-Hms&quot;})++'.csv']">
+			<scheduling-strategy>
+				<fixed-frequency />
+			</scheduling-strategy>
+		</file:listener>
+		<ee:transform doc:name="Transform Message" doc:id="99150649-5103-4fcb-aadf-fdb3ca484029" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	Year: payload01.Year as Number,
+	Industry_aggregation_NZSIOC: payload01.Industry_aggregation_NZSIOC,
+	Industry_code_NZSIOC: payload01.Industry_code_NZSIOC,
+	Industry_name_NZSIOC: payload01.Industry_name_NZSIOC,
+	Units: payload01.Units,
+	Variable_code: payload01.Variable_code,
+	Variable_name: payload01.Variable_name,
+	Variable_category: payload01.Variable_category,
+	Value: payload01.Value,
+	Industry_code_ANZSIC06: payload01.Industry_code_ANZSIC06
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<batch:job jobName="batch-processingBatch_Job" doc:id="933bf0f0-a869-4bb6-80a7-ef8835cccd91" blockSize="500">
+			<batch:process-records >
+				<batch:step name="Batch_Step" doc:id="603bfcd8-f74e-4b44-a0fb-b53043807ccc" >
+					<db:insert doc:name="Insert" doc:id="475b8607-637c-468b-b5d9-15f569dce48c" config-ref="Database_Config">
+						<db:sql>insert into batch values (:Year,:Industry_aggregation_NZSIOC,:Industry_code_NZSIOC,:Industry_name_NZSIOC,:Units,:Variable_code,:Variable_name,:Variable_category,:Value,:Industry_code_ANZSIC06);
+						</db:sql>
+						<db:input-parameters><![CDATA[#[payload]]]></db:input-parameters>						
+					</db:insert>
+				</batch:step>
+			</batch:process-records>
+			<batch:on-complete >
+				<logger level="INFO" doc:name="Logger" doc:id="b6347b13-b2a5-4a68-a7d2-316f9a60ed06" message="#['\nTotal Loaded: ' ++ payload.loadedRecords ++ 
+'\nTotal failed: ' ++  payload.failedRecords 
+++ '\n Total Processed: ' ++ payload.processedRecords 
+++ '\n Total Successfull: ' ++ payload.successfulRecords
+++ '\n Total Records: ' ++ payload.totalRecords]"/>
+			</batch:on-complete>
+		</batch:job>
+	</flow>
+</mule>

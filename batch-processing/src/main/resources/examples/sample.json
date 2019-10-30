@@ -1,0 +1,12 @@
+{
+	"Year": 2018,
+	"Industry_aggregation_NZSIOC": "Level 1",
+	"Industry_code_NZSIOC": 99999,
+	"Industry_name_NZSIOC": "All industries",
+	"Units": "Dollars (millions)",
+	"Variable_code": "H01",
+	"Variable_name": "Total income",
+	"Variable_category": "Financial performance",
+	"Value": 691859,
+	"Industry_code_ANZSIC06": "ANZSIC06 divisions A-S (excluding classes K6330, L6711, O7552, O760, O771, O772, S9540, S9601, S9602, and S9603)"
+}
