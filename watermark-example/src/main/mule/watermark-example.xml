@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+	<flow name="watermark-exampleFlow" doc:id="365fc0e0-2806-4d6e-b2db-9d2f7af5f679" >
+		<file:listener doc:name="accounts" doc:id="a0578864-bf59-45d3-9f39-715abf13b93b" config-ref="File_Config" directory="input" moveToDirectory="output" renameTo="#[(now() as String {format: &quot;MMddyyyy-HH.mm.SS&quot;}) ++ attributes.fileName ++ '.bkup']">
+			<scheduling-strategy >
+				<fixed-frequency />
+			</scheduling-strategy>
+			<file:matcher filenamePattern="*csv" />
+		</file:listener>
+		<logger level="INFO" doc:name="Logger" doc:id="20279de7-23e3-473a-a90a-6eb0ff156cf7" message="#[payload]"/>
+	</flow>
+	<flow name="Automatic-watermark-exampleFlow1" doc:id="b0a73e26-2f41-4ba7-bb8c-2226257acfb3" initialState="started">
+		<db:listener doc:name="accounts" doc:id="a0029556-50c9-4af2-a580-269b56c2f2b9" config-ref="Database_Config" table="accounts" watermarkColumn="accountId" idColumn="accountId">
+			<scheduling-strategy >
+				<fixed-frequency frequency="10" timeUnit="SECONDS"/>
+			</scheduling-strategy>
+		</db:listener>
+		<ee:transform doc:name="Transform Message" doc:id="3c036d75-f865-4ef1-8784-b3d333fa8ba6" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/csv header=false
+---
+[payload]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<file:write doc:name="DBaccounts.csv" doc:id="63199be1-6c72-4320-ad9b-c9ccf9e61eba" config-ref="File_Config" path="output/DBaccounts.csv" mode="APPEND"/>
+		<logger level="INFO" doc:name="payload" doc:id="5867b29a-0479-45e3-98d1-260f7d5d93ba" message="#[payload]"/>
+	</flow>
+	<flow name="Manual-watermark-exampleFlow1" doc:id="5d75db44-bc22-4d40-aecc-5e9098a7e16f" initialState="started">
+		<scheduler doc:name="Scheduler" doc:id="2558b0ce-ca49-411d-98cf-4c76c0caf420" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="10" timeUnit="SECONDS"/>
+			</scheduling-strategy>
+		</scheduler>
+		<os:retrieve doc:name="Retrieve" doc:id="b2ae3c35-33ef-4c55-a65b-f275be64154a" key="lastAccountID" target="lastAccountID">
+			<os:default-value ><![CDATA[#[0]]]></os:default-value>
+		</os:retrieve>
+		<db:select doc:name="Select" doc:id="76a6ded3-310a-439e-84b8-dade27f78d93" config-ref="Database_Config">
+			<db:sql >SELECT * FROM accounts WHERE postal = :postal and accountId&gt;:lastAccountID</db:sql>
+			<db:input-parameters ><![CDATA[#[{ postal: '94105',lastAccountID:vars.lastAccountID}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Choice" doc:id="fc75d310-300e-4878-9084-6338ec1f55fe" >
+			<when expression="#[not isEmpty(payload)]">
+				<os:store doc:name="Store" doc:id="f806b815-1606-497b-a2a0-ef376c4ce29c" key="lastAccountID">
+			<os:value><![CDATA[#[max(payload.*accountID)]]]></os:value>
+		</os:store>
+				<file:write doc:name="DBaccountsPostal.csv" doc:id="5ab3b578-ce21-443e-bd98-5399d2227e91" config-ref="File_Config" path="output/DBaccountsPostal.csv">
+			<file:content><![CDATA[#[output application/csv header=false --- payload]]]></file:content>
+		</file:write>
+				<logger level="INFO" doc:name="Logger" doc:id="71a1116b-3e1e-4a70-a020-c3fac972dea8" message="#[sizeOf(payload)]" />
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="No New Records" doc:id="69991ae2-ae60-46fe-ab0b-c74ab8101318" message="No New Records"/>
+			</otherwise>
+		</choice>
+	</flow>
+</mule>

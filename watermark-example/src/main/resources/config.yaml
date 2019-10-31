@@ -1,0 +1,9 @@
+file:
+  accountsDir: "E:/Mulesoft/Mule 4/MUFundamentals4.1_studentFiles_22sept2018/resources"
+  
+db:
+  host: "mudb.mulesoft-training.com"
+  port: "3306"
+  user: "mule"
+  password: "mule"
+  database: "training"
