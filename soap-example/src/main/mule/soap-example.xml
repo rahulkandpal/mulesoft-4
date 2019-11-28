@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:apikit-soap="http://www.mulesoft.org/schema/mule/apikit-soap"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/apikit-soap http://www.mulesoft.org/schema/mule/apikit-soap/current/mule-apikit-soap.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<apikit-soap:config name="soapkit-config" service="TshirtService" port="TshirtServicePort" doc:name="APIKit for SOAP Configuration" doc:id="caf6ad51-8439-4686-9806-8ba1ba50e131" wsdlLocation="api/tshirt2.wsdl" />
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="a041540d-860c-42a5-ba67-02f4011d446b" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="soap-exampleFlow" doc:id="fbe4b2d6-282c-4900-8580-8dae7ae848cb" >
+		<http:listener doc:name="Listener" doc:id="96f5896b-01d1-4ed1-8ee3-f9c974329d27" config-ref="HTTP_Listener_config" path="/TshirtService/TshirtServicePort"/>
+		<apikit-soap:router doc:name="SOAP Router" doc:id="2b529e8a-eb46-4002-ad6d-3f0ada8b9011" config-ref="soapkit-config">
+			<apikit-soap:attributes ><![CDATA[#[%dw 2.0
+          	output application/java
+          	---
+          	{
+              	headers: attributes.headers,
+              	method: attributes.method,
+                  queryString: attributes.queryString
+        	}]]]></apikit-soap:attributes>
+		</apikit-soap:router>
+	</flow>
+	<flow name="OrderTshirt:\soapkit-config" doc:id="f2025fd2-00b3-434b-a831-d1bd533309ad" >
+		<ee:transform doc:name="Transform Message" doc:id="f2e3b421-7008-4f04-9601-88502beadcf6" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+ns ns0 http://mulesoft.org/tshirt-service
+---
+{
+    body : {
+         ns0#OrderTshirtResponse: {
+           orderId: "I got a request from "
+           ++ payload.body.ns0#OrderTshirt.name
+           ++ "of size " ++ payload.body.ns0#OrderTshirt.size
+         }
+    } write "application/xml"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
