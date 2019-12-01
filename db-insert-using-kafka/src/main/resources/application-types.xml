@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<types:mule xmlns:types="http://www.mulesoft.org/schema/mule/types">
+  <types:catalog>
+    <types:type name="temp" format="json">
+      <types:shape format="weave" example="examples/sample.json"><![CDATA[%dw 2.0
+type temp = {|
+  customer_id: Number {"typeId": "int"}, 
+  fname: String, 
+  lname: String
+|} {"MetadataFormat": "json",
+"example": "{\"customer_id\":5875,\"fname\":\"deepak\",\"lname\":\"dalal\"}"}
+
+]]></types:shape>
+    </types:type>
+  </types:catalog>
+</types:mule>

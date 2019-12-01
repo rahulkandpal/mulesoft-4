@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:kafka="http://www.mulesoft.org/schema/mule/kafka"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/kafka http://www.mulesoft.org/schema/mule/kafka/current/mule-kafka.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="0ff8c977-7851-4b20-ae93-68bd53bd3390" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<kafka:kafka-producer-config name="Apache_Kafka_Producer_configuration" doc:name="Apache Kafka Producer configuration" doc:id="e2798248-ba62-4e1d-8f06-1bd93503ec76" >
+		<kafka:basic-kafka-producer-connection bootstrapServers="localhost:9092" />
+	</kafka:kafka-producer-config>
+	<kafka:kafka-consumer-config name="Apache_Kafka_Consumer_configuration" doc:name="Apache Kafka Consumer configuration" doc:id="a12e7269-889c-4672-ad81-4d64af588bbe" >
+		<kafka:basic-kafka-consumer-connection groupId="test-consumer" bootstrapServers="localhost:9092" />
+	</kafka:kafka-consumer-config>
+	
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="ec24628c-4425-4eda-95cc-6c50bd2818da" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="root" database="test" />
+	</db:config>
+	<flow name="db-insert-using-kafkaFlow" doc:id="59add461-ad85-4a53-a260-e0bc695cafd4" >
+		<http:listener doc:name="Listener" doc:id="2b95f6c5-6228-4d6d-a14f-742254d26a16" config-ref="HTTP_Listener_config" path="toKafka"/>
+		<kafka:producer doc:name="Publish Message" doc:id="e44a3ace-6651-4eb8-83cc-041bd22c7f5f" config-ref="Apache_Kafka_Producer_configuration" topic="test"/>
+	</flow>
+	<flow name="db-insert-using-kafkaFlow2" doc:id="9c0026f9-56d2-422b-8515-b933bf61eb5f" >
+		<kafka:consumer doc:name="Message Consumer" doc:id="b877696c-639b-46e2-8d4b-7f3813fe145d" config-ref="Apache_Kafka_Consumer_configuration" topic="test"/>
+		<set-payload value="#[payload]" doc:name="Set Payload" doc:id="0108e407-150e-4a2b-a8ed-ea45cdea5d09" mimeType="application/json"/>
+		<ee:transform doc:name="Transform Message" doc:id="b994f2e8-35c8-42dd-8d63-c6b9eddcff9c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<db:insert doc:name="Insert" doc:id="33f495e9-ce39-4e23-a524-65ec5077d5aa" config-ref="Database_Config">
+			<db:sql >insert into back_up values (:customer_id,:fname,:lname)</db:sql>
+			<db:input-parameters ><![CDATA[#[payload]]]></db:input-parameters>
+		</db:insert>
+		<logger level="INFO" doc:name="Logger" doc:id="3f157288-a49c-498f-bf8b-f3b4fae81aa7" message="saved to database"/>
+	</flow>
+</mule>
