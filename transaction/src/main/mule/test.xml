@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="21836159-0803-46c0-86bd-4970df29f7d3" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="cb9139f6-a797-40ce-abca-6b634d36ef5a" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="root" database="test" />
+	</db:config>
+	<flow name="testFlow" doc:id="6ba2afb1-c438-4c64-b317-f2bfaf447ca9" >
+		<http:listener doc:name="Listener" doc:id="43fb8c25-9dd8-4c9c-9d51-29b8035620b1" config-ref="HTTP_Listener_config" path="start"/>
+		<try doc:name="Try" doc:id="90fdaab3-b384-4aba-b48a-1ad7243871e4" transactionalAction="ALWAYS_BEGIN">
+			<ee:transform doc:name="Transform Message" doc:id="d9115328-64e3-4a3b-a623-2630c61d598e">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"id":8,
+	"name":"xxx"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			<db:insert doc:name="Insert" doc:id="50456545-e3ea-4eb6-b57e-686ecd5eb153" config-ref="Database_Config">
+			<db:sql>insert into test1 values(:id,:name)</db:sql>
+			<db:input-parameters><![CDATA[#[payload]]]></db:input-parameters>
+		</db:insert>
+			<logger level="INFO" doc:name="Logger" doc:id="1a5f6c27-fe79-4860-9f4e-e4e798ccc99c" message="added test1" />
+			<ee:transform doc:name="Transform Message" doc:id="0cd66c59-71e4-4cf2-a44d-cee7f0338877">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"id":8,
+	"name":"xxx"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			<db:insert doc:name="Insert" doc:id="c8e99dac-c904-4daf-b1a2-b37011357705" config-ref="Database_Config">
+			<db:sql>insert into test2 values(:id,:name)</db:sql>
+			<db:input-parameters><![CDATA[#[payload]]]></db:input-parameters>
+		</db:insert>
+			<logger level="INFO" doc:name="Logger" doc:id="3f122973-5a03-4f16-b726-b3452cba509d" message="added test2" />
+		</try>
+		<logger level="INFO" doc:name="Logger" doc:id="aa6b0f58-88cf-4189-86b6-b987ee18ad61" message="Added to both"/>
+	</flow>
+</mule>
