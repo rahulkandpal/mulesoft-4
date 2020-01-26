@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:ftp="http://www.mulesoft.org/schema/mule/ftp"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ftp http://www.mulesoft.org/schema/mule/ftp/current/mule-ftp.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<ftp:config name="FTP_Config" doc:name="FTP Config" doc:id="13b0a9a6-aa66-42f2-b8f8-7b1fd04ebb57" >
+		<ftp:connection host="localhost" username="root" password="root" workingDir="E:\files\ftp\"/>
+	</ftp:config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="05ca4d51-c5cb-4922-8f53-e89b8e97542f" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="root" database="test" />
+	</db:config>
+	<flow name="ftp-2-dbFlow" doc:id="08b5cd3a-003e-49c5-910d-6033a2697b2a" >
+		<scheduler doc:name="Scheduler" doc:id="442ca7eb-c5c5-44ff-a615-b961cd960c42" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="10000"/>
+			</scheduling-strategy>
+		</scheduler>
+		<ftp:read doc:name="Read" doc:id="f50d21b5-3f5c-4fbf-a903-5bf918065e30" config-ref="FTP_Config" path="input\open_orders.csv"/>
+		<ee:transform doc:name="Transform Message" doc:id="ee535b73-496d-43ed-a1cc-29d34e8a4c81" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload map 
+{
+	"orderNumber":$."orderNumber",
+	"status":$."status"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<db:bulk-insert doc:name="Bulk insert" doc:id="e92f5afe-cc6d-469d-8928-12a491702617" config-ref="Database_Config">
+			<db:sql >insert into orders (orderNumber,status) values (:orderNumber,:status)</db:sql>
+		</db:bulk-insert>
+		<logger level="INFO" doc:name="Logger" doc:id="2e589d4e-b7c0-4801-a079-7632697d7258" message="#[payload]" />
+	</flow>
+</mule>
