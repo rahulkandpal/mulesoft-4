@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="48a9bf38-0e2b-45e8-a164-00d1aa1a6b0a" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="b3ee7792-5b2a-40bf-ad56-390210c1aba2" >
+		<http:request-connection protocol="HTTPS" host="api.github.com" port="443" >
+			<http:authentication >
+				<http:basic-authentication username="xyz@gmail.com" password="1234" />
+			</http:authentication>
+		</http:request-connection>
+	</http:request-config>
+	<flow name="http-basic-authFlow" doc:id="967dd47f-9e84-4c62-99a0-3c0ad3039315" >
+		<http:listener doc:name="Listener" doc:id="9f35e526-ad1f-43d9-af19-49eb90b0c48a" config-ref="HTTP_Listener_config" path="/" allowedMethods="GET"/>
+		<http:request method="GET" doc:name="Request" doc:id="8f955ba1-e7ec-43d7-953c-e226eedef4a4" config-ref="HTTP_Request_configuration" path="/user"/>
+		<ee:transform doc:name="Transform Message" doc:id="61ba6ab5-2658-4f47-b1fb-9461abfc3c8b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
