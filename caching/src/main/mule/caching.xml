@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="af00e864-2199-4f82-9507-652503ba255e" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="root" database="projectdb" />
+	</db:config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="c793af95-9e95-412e-b9f2-355873b6da0b" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<ee:object-store-caching-strategy name="Caching_Strategy" doc:name="Caching Strategy" doc:id="7ec9c03a-5c0b-4f3e-a761-4c0dac76cd1e" keyGenerationExpression="#[vars.id]" />
+	<flow name="cachingFlow" doc:id="d44f3618-117b-4323-9948-055cb313ee06" >
+		<http:listener doc:name="Listener" doc:id="9dec385d-10de-4cb4-b19b-ea201fe72301" path="cache" config-ref="HTTP_Listener_config"/>
+		<set-variable value="#[attributes.queryParams.'id']" doc:name="Set Variable" doc:id="d6cf77cc-c2e1-42c7-8b0e-3b24305b9cd8" variableName="id"/>
+		<ee:cache doc:name="Cache" doc:id="7a2ec125-4f90-45e8-87e8-a02e4ccaf2d6" cachingStrategy-ref="Caching_Strategy">
+			<db:select doc:name="Select" doc:id="96a12518-b917-46be-9c15-4a484422b131" config-ref="Database_Config">
+			<db:sql>select * from location where id=:id</db:sql>
+			<db:input-parameters><![CDATA[#[{ id: vars.id}]]]></db:input-parameters>
+		</db:select>
+			<logger level="INFO" doc:name="Logger" doc:id="c78c403c-a171-434c-bdb6-2192dd96e11f" message="***************************  fetching data from db ***********************************"/>
+		</ee:cache>
+		<ee:transform doc:name="Transform Message" doc:id="e2ce3d7b-f211-4653-ba42-3850930805bb" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
