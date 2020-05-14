@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="8af09f79-f38c-4867-ba4b-15cfcfcd931f" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="8e3a0e8c-77f8-4687-8488-53d367000fd6" >
+		<file:connection workingDir="E:\files\input" />
+	</file:config>
+	<file:config name="File_write" doc:name="File Config" doc:id="71adabf6-dfd8-4ef3-8daf-a45109547ead" >
+		<file:connection workingDir="E:\files\output" />
+	</file:config>
+	<flow name="Copy_of_ftp-2-dbFlow" doc:id="be6fc4bd-2e98-493a-8261-5ab2cdf142df" >
+		<http:listener doc:name="Copy_of_Listener" doc:id="62627649-98bc-4746-8679-409d4c1cfaed" config-ref="HTTP_Listener_config" path="writetocsv" />
+		<file:read doc:id="95e178aa-d50f-4523-9304-9e9b131fe4ef" path="temp.xlsx" outputMimeType="application/xlsx" doc:name="Copy_of_Read" config-ref="File_Config"/>
+		<ee:transform doc:name="Copy_of_Transform Message" doc:id="17a181c9-ccf3-46b6-8f52-a399fae20126" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+import * from dw::core::Objects
+output application/json
+---
+valueSet(payload)]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<foreach doc:name="Copy_of_For Each" doc:id="57dafbef-d412-427e-956f-a3d4cb5a6e5e" collection="#[payload]" >
+			<file:write doc:id="3c79e5b4-5fe3-4af5-9e83-bace6be44efd" path="#['bkup-'++(uuid())++'.csv']" mode="CREATE_NEW" doc:name="Copy_of_Write" config-ref="File_write">
+				<file:content ><![CDATA[#[%dw 2.0
+output application/csv
+---
+payload]]]></file:content>
+			</file:write>
+		</foreach>
+	</flow>
+</mule>
