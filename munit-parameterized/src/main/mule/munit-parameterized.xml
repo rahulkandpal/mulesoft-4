@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="ac0ebec9-f706-4fa3-99e0-282ae843eef4" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="munit-parameterizedFlow" doc:id="aa96d83f-a99f-4e01-8288-125983359aa6" >
+		<http:listener doc:name="Listener" doc:id="f8d7a5b9-25c3-4069-9dae-fe2d2b2fabe7" config-ref="HTTP_Listener_config" path="/test"/>
+		<logger level="INFO" doc:name="Logger" doc:id="626ddcc4-5aa9-4fb1-a313-30788d0a8d63" message="#[attributes.queryParams.p1 default 'dev'  ++ attributes.queryParams.p2 default 'prod']"/>
+		<set-payload value="#[attributes.queryParams.p1 default 'dev'  ++ attributes.queryParams.p2 default 'prod']" doc:name="Set Payload" doc:id="a0be00f4-6636-4712-9254-c3f18faff8a5" mimeType="text/plain"/>
+	</flow>
+</mule>

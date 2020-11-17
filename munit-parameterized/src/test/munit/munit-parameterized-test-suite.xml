@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:munit="http://www.mulesoft.org/schema/mule/munit"
+	xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<munit:config name="munit-parameterized-test-suite.xml" >
+		<munit:parameterizations file="cases.yaml" >
+			<munit:parameterization name="test1" >
+				<munit:parameters >
+					<munit:parameter propertyName="p1" value="dev" />
+					<munit:parameter propertyName="p2" value="prod" />
+					<munit:parameter propertyName="output" value="devprod" />
+				</munit:parameters>
+			</munit:parameterization>
+			<munit:parameterization name="test2" >
+				<munit:parameters >
+					<munit:parameter propertyName="p1" value="test" />
+					<munit:parameter propertyName="p2" value="ple" />
+					<munit:parameter propertyName="output" value="testple" />
+				</munit:parameters>
+			</munit:parameterization>
+		</munit:parameterizations>
+	</munit:config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="68e48b70-e419-4592-b9c0-c05420628214" >
+		<http:request-connection host="localhost" port="8081" />
+	</http:request-config>
+	<munit:test name="munit-parameterized-test-suite-munit-parameterizedFlowTest" doc:id="20705f3d-370e-4e6b-a29b-02acddf9090a" description="Test">
+		<munit:execution>
+			<http:request method="GET" doc:name="Request" doc:id="3809fb8b-040d-4610-9052-caee1d3c96a9" config-ref="HTTP_Request_configuration" path="/test">
+				<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"p1" : "${p1}",
+	"p2" : "${p2}"
+}]]]></http:query-params>
+			</http:request>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-equals doc:name="Assert equals" doc:id="1bcdff95-ee8c-460f-876b-90e076c1f692" actual="#[payload]" expected="${output}"/>
+		</munit:validation>
+	</munit:test>
+
+
+</mule>
