@@ -1,0 +1,8 @@
+filepath: E:\MuleProjects\poc-salesforce\src\main\resources
+
+db:
+  host: localhost
+  port: "3306"
+  user: root
+  password: root
+  database: test

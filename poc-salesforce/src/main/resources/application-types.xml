@@ -1,0 +1,37 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<types:mule xmlns:types="http://www.mulesoft.org/schema/mule/types">
+  <types:catalog>
+    <types:type name="csvdata" format="csv">
+      <types:shape format="weave" example="100-contacts.csv"><![CDATA[%dw 2.0
+
+type csvdata = Array<{|  first_name: String,   last_name: String,   company_name: String,   address: String,   city: String,   county: String,   state: String,   zip: String,   phone1: String,   phone: String,   email: String|}> {"isQuotedString": "false",
+"header": "true",
+"headerLineNumber": "0"}
+
+]]></types:shape>
+      <types:properties>
+        <types:property name="headerLineNumber" value="0"/>
+        <types:property name="header" value="true"/>
+        <types:property name="isQuotedString" value="false"/>
+      </types:properties>
+    </types:type>
+  </types:catalog>
+  <types:enrichment select="#fc618b31-fabb-4faa-b4aa-708b0419d118">
+    <types:processor-declaration>
+      <types:input-event>
+        <types:message>
+          <types:payload type="csvdata"/>
+        </types:message>
+      </types:input-event>
+    </types:processor-declaration>
+  </types:enrichment>
+  <types:enrichment select="#3a8ea05b-9b7e-4994-8957-052ba7799a94">
+    <types:processor-declaration>
+      <types:input-event>
+        <types:message>
+          <types:payload type="csvdata"/>
+        </types:message>
+      </types:input-event>
+    </types:processor-declaration>
+  </types:enrichment>
+</types:mule>

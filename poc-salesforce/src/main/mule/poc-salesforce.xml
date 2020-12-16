@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="8546a170-1bfe-402b-a258-9bf9795470bb" >
+		<salesforce:basic-connection username="***" password="****" securityToken="**" />
+	</salesforce:sfdc-config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="9f173854-ef6f-49b0-9ed7-a57275cbc1e8" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="a89ea43b-e303-4736-8a81-174b65dc4951" >
+		<file:connection workingDir="${filepath}" />
+	</file:config>
+	<configuration-properties doc:name="Configuration properties" doc:id="35775cd8-c68c-4d4c-b7e4-12571508154d" file="config.yaml" />
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="3e8993d2-1045-4dce-8f40-d33157cb843a" >
+		<db:my-sql-connection host="${db.host}" port="${db.port}" user="${db.user}" password="${db.password}" database="${db.database}" />
+	</db:config>
+	<flow name="csv-to-salesforce-contacts" doc:id="68ee7568-471b-4ea5-9041-64890e826050" >
+		<http:listener doc:name="Listener" doc:id="b5b8d7fc-7653-4984-a7a9-01f32d4406ae" config-ref="HTTP_Listener_config" path="/screate"/>
+		<file:read doc:name="Read" doc:id="4467f2af-817f-46c5-a202-a9d866b3fe3e" config-ref="File_Config" path="contacts.csv"/>
+		<ee:transform doc:name="Transform Message" doc:id="1c138a80-8d10-4e44-b1bf-14c250a5fd08" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map {
+
+	FirstName: $.firstname,
+	LastName : $.surname,
+	Email : $.email,
+	Phone : $.phone    
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:create type="Contact" doc:name="Create" doc:id="f837b2c1-1b96-4b31-a9c5-360ddfa61ba5" config-ref="Salesforce_Config"/>
+		<ee:transform doc:name="Transform Message" doc:id="9a84c98f-e74d-46c9-9754-962d42a24e7c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="poc-batchprocessing-DB" doc:id="844bd5c6-bb20-422c-ad9b-1269a4b382f1" >
+		<http:listener doc:name="Listener" doc:id="6c998438-09d3-4934-bce0-b78e4cd9803a" config-ref="HTTP_Listener_config" path="/db"/>
+		<file:read doc:name="Read" doc:id="265f11e3-87cf-4756-acf7-2afd11f2fd82" config-ref="File_Config" path="100-contacts.csv"/>
+		<ee:transform doc:name="Transform Message" doc:id="fc618b31-fabb-4faa-b4aa-708b0419d118" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<batch:job jobName="poc-salesforceBatch_Job" doc:id="8b90c50c-cc2f-4e2d-b19c-3e607fa0eae8" maxFailedRecords="-1">
+			<batch:process-records >
+				<batch:step name="Batch_Step" doc:id="9a590b05-4a45-4604-95a3-841bc63aa8b2" >
+					<batch:aggregator doc:name="Batch Aggregator" doc:id="87dd89cc-acf4-4a60-baae-a18b13eaca74" size="25">
+						<logger level="INFO" doc:name="Logger" doc:id="02cb9718-9fe2-4ed8-8a94-bffe36d12adc" message="%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"/>
+						<db:bulk-insert doc:name="Bulk insert" doc:id="ddb488ff-2498-4d46-a51f-d6a8a4afd070" config-ref="Database_Config">
+							<db:sql ><![CDATA[insert into contacts values(:first_name,:last_name,:company_name,:address,:city,:county,:state,:zip,:phone1,:phone,:email)]]></db:sql>
+						</db:bulk-insert>
+					</batch:aggregator>
+				</batch:step>
+			</batch:process-records>
+			<batch:on-complete >
+				<ee:transform doc:name="Transform Message" doc:id="dd7d0104-2e10-473a-98bb-24742b6c320f">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Total Records" : payload.totalRecords,
+	"Loaded Records": payload.loadedRecords,
+	"Processed Records" : payload.processedRecords,
+	"Successful Records" : payload.successfulRecords,
+	"Failed Records" : payload.failedRecords
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="39c6c880-c541-43cb-a951-8e303ac90d1c" message="#[payload]"/>
+			</batch:on-complete>
+		</batch:job>
+	</flow>
+	<flow name="poc-batchprocessin-salesforce" doc:id="321a8646-c73f-4ce3-9134-bf1623d11e5f" >
+		<http:listener doc:name="Listener" doc:id="5ad04a46-31a9-4f84-8f25-7aae92892e23" config-ref="HTTP_Listener_config" path="/sfbatch" />
+		<file:read doc:name="Read" doc:id="002ec5e0-9937-4332-a8fd-c93a35af921e" config-ref="File_Config" path="100-contacts.csv" />
+		<ee:transform doc:name="Transform Message" doc:id="3a8ea05b-9b7e-4994-8957-052ba7799a94" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload map {	
+	"FirstName":$.first_name,
+	"LastName":$.last_name,
+	"MailingCity":$.city,
+	"MailingState":$.state,
+	"MailingPostalCode":$.zip,
+	"Phone":$.phone1,
+	"MobilePhone":$.phone,
+	"Email":$.Email	
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<batch:job jobName="Copy_of_poc-salesforceBatch_Job" doc:id="c9ff4892-047b-4e03-be7a-846978ee7545" maxFailedRecords="-1" >
+			<batch:process-records >
+				<batch:step name="Copy_of_Batch_Step" doc:id="f5814a93-40e6-4e94-b906-aa92c14b8874" >
+					<batch:aggregator doc:name="Copy_of_Batch Aggregator" doc:id="19277991-feed-4bd2-8558-9014b32e41d5" size="25" >
+						<logger level="INFO" doc:name="Logger" doc:id="35df01ee-cb13-46ac-bdad-c24a84bab843" message="%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" />
+						<salesforce:create doc:name="Create" doc:id="a352f01c-5d08-4321-b6a8-97810d99aaa0" config-ref="Salesforce_Config" type="Contact"/>
+					</batch:aggregator>
+				</batch:step>
+			</batch:process-records>
+			<batch:on-complete >
+				<ee:transform doc:name="Transform Message" doc:id="e5960349-6cfb-4a90-a5e9-5406159082e6" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Total Records" : payload.totalRecords,
+	"Loaded Records": payload.loadedRecords,
+	"Processed Records" : payload.processedRecords,
+	"Successful Records" : payload.successfulRecords,
+	"Failed Records" : payload.failedRecords
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="ab0b09aa-e9c9-4590-b58c-570807f80585" message="#[payload]" />
+			</batch:on-complete>
+		</batch:job>
+	</flow>
+	<flow name="poc-salesforce-sync" doc:id="ce052ca6-167b-4790-b002-3338ad5db362" >
+		<db:listener table="contacts_master" doc:name="On Table Row" doc:id="37d729fb-80c9-4a4f-8f72-c9dae756f698" config-ref="Database_Config" watermarkColumn="created_date" idColumn="created_date">
+			<scheduling-strategy >
+				<fixed-frequency />
+			</scheduling-strategy>
+		</db:listener>
+		<logger level="INFO" doc:name="Logger" doc:id="f6573489-f9ed-4235-add4-05e2e5d379e5" message="%%%%%%%%%%%%%%%%%%%%%%%% INCOMING PAYLOAD %%%%%%%%%%%%%%%%%%%"/>
+		<logger level="INFO" doc:name="Logger" doc:id="f3464cc0-2288-4724-99ff-54111c9f6353" message="#[payload]" />
+		<db:insert doc:name="Insert" doc:id="e7480742-2ff9-411b-bda7-bd07ba538984" config-ref="Database_Config" target="Result">
+			<db:sql ><![CDATA[insert into contacts values(:first_name,:last_name,:company_name,:address,:city,:county,:state,:zip,:phone1,:phone,:email)
+]]></db:sql>
+			<db:input-parameters ><![CDATA[#[payload]]]></db:input-parameters>
+		</db:insert>
+		<ee:transform doc:name="Transform Message" doc:id="a35bb924-5f7e-4029-b7b3-d3e5a6afefee">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+[ {	
+	"FirstName":payload.first_name,
+	"LastName":payload.last_name,
+	"MailingCity":payload.city,
+	"MailingState":payload.state,
+	"MailingPostalCode":payload.zip,
+	"Phone":payload.phone1,
+	"MobilePhone":payload.phone,
+	"Email":payload.email	
+}]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:create type="Contact" doc:name="Create" doc:id="1f250f9f-3111-4608-a66b-00dbeb0329bd" config-ref="Salesforce_Config"/>
+		<choice doc:name="Choice" doc:id="c287db1b-b09d-41bd-94b7-20ad0a2c47ff" >
+			<when expression="#[payload.successful==false]">
+				<logger level="ERROR" doc:name="Logger" doc:id="745ab9d7-c8cc-49b5-8e60-dacf2afc816a" message="#[payload.items.exception.localizedMessage]"/>
+				<raise-error doc:name="Raise error" doc:id="8e6ec47c-37c6-4b21-9659-05c25d309132" type="SFDC: ERROR_CREATING_CONTACT" description="Request to create has failed. Please check the logs above"/>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="dc5ed604-fc5e-4ab1-b360-5be7b555c297" message="#['%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Record Created%%%%%%%%%%%%%%%%%']" />
+			</otherwise>
+		</choice>
+	</flow>
+</mule>
