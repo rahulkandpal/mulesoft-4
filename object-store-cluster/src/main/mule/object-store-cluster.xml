@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="30dc15a4-736c-450d-ac9d-c5e99b858f20" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<os:object-store name="Object_store" doc:name="Object store" doc:id="a1d84d5b-3f78-4f30-be05-b98d1d615f07" />
+	<os:object-store name="Object_store_2" doc:name="Object store" doc:id="63912b60-12b7-4952-8af6-f3b6012ec4c9" />
+	<flow name="object-store-clusterFlow" doc:id="8f881d7e-2553-43d1-a0f9-a863cb3c5134" >
+		<http:listener doc:name="Listener" doc:id="9f9c48ee-ad85-4ec5-8c8b-725cd9767a59" config-ref="HTTP_Listener_config" path="/hit"/>
+		<os:retrieve doc:name="Retrieve" doc:id="6caba5f2-c620-4365-b02e-f54f5e6ae08d" key="count1" objectStore="Object_store" target="counter1">
+			<os:default-value ><![CDATA[#[1]]]></os:default-value>
+		</os:retrieve>
+		<os:store doc:name="Store" doc:id="5fb1f161-70ce-45d4-b599-e47ed2a98993" key="count1" objectStore="Object_store">
+			<os:value ><![CDATA[#[vars.counter1 + 1]]]></os:value>
+		</os:store>
+		<set-payload value="#[' Total Hits on this URL1 : ' ++ vars.counter1 as String]" doc:name="Set Payload" doc:id="c38f084d-c2d0-479d-8055-8724e9312a64" mimeType="text/plain"/>
+	</flow>
+	<flow name="object-store-clusterFlow2" doc:id="45f97c09-563e-435b-9239-62bf97b58f95" >
+		<http:listener doc:name="Listener" doc:id="9981a2f7-1a9b-4307-b864-71de6028b3b8" config-ref="HTTP_Listener_config" path="/hit2" />
+		<os:retrieve doc:name="Retrieve" doc:id="9035dfc7-edd8-4c7d-a143-fe27be49d2fa" key="count2" objectStore="Object_store" target="counter2" >
+			<os:default-value ><![CDATA[#[1]]]></os:default-value>
+		</os:retrieve>
+		<os:store doc:name="Store" doc:id="7dccefc7-96ef-465e-b007-9beb91a2a18a" key="count2" objectStore="Object_store" >
+			<os:value ><![CDATA[#[vars.counter2 + 1]]]></os:value>
+		</os:store>
+		<set-payload value="#[' Total Hits on this URL2 : ' ++ vars.counter2 as String]" doc:name="Set Payload" doc:id="8c18546d-c3c1-4185-b7ed-0cee7638d2dc" mimeType="text/plain" />
+	</flow>
+	<flow name="object-store-clusterFlow3" doc:id="e71da415-7491-4791-a2b8-a8af3bdd6d5f" >
+		<http:listener doc:name="Listener" doc:id="313b727f-8b9d-4cec-868a-44a65aa1ade0" config-ref="HTTP_Listener_config" path="/hit3" />
+		<os:retrieve doc:name="Retrieve" doc:id="bb595664-6e8c-4ecc-a2a4-d3bf92f92f22" key="count3" objectStore="Object_store_2" target="counter3" >
+			<os:default-value ><![CDATA[#[1]]]></os:default-value>
+		</os:retrieve>
+		<os:store doc:name="Store" doc:id="db444215-6083-48c4-ab15-fec241cad815" key="count3" objectStore="Object_store_2" >
+			<os:value ><![CDATA[#[vars.counter3 + 1]]]></os:value>
+		</os:store>
+		<set-payload value="#[' Total Hits on this URL2 : ' ++ vars.counter3 as String]" doc:name="Set Payload" doc:id="81fcab8b-bb8c-4b92-b3b8-6db1a9d2642e" mimeType="text/plain" />
+	</flow>
+</mule>
