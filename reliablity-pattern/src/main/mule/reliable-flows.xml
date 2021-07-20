@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:bti="http://www.mulesoft.org/schema/mule/ee/bti"
+	xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/ee/bti http://www.mulesoft.org/schema/mule/ee/bti/current/mule-bti-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="556d3535-bbe7-4962-9878-a2593bea5637" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="e4f4bf7e-a119-43cb-9287-1ceabf8ce67d" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="root" database="test" useXaTransactions="true" transactionIsolation="SERIALIZABLE"/>
+	</db:config>
+	<vm:config name="VM_Config" doc:name="VM Config" doc:id="53129087-64a9-41dd-81b3-7de2ff0f0398" >
+		<vm:queues >
+			<vm:queue queueName="db" queueType="PERSISTENT" />
+		</vm:queues>
+	</vm:config>
+	<bti:transaction-manager doc:name="Bitronix Transaction Manager" doc:id="906c21b1-f3ad-4c2c-9f42-cd977dcb20bc" />
+	<sub-flow name="business-logic" doc:id="03a37470-8459-4bc7-8207-1c811559378b" >
+		<logger level="INFO" doc:name="Logger" doc:id="411a9496-a925-4685-96d2-6b5195045645" message="#['VM started consuming']" />
+		<ee:transform doc:name="Transform Message" doc:id="18624faf-9f26-4749-9620-4bfe9b1a67e5">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+import * from dw::Runtime
+output application/json
+---
+{
+	"username": payload.username,
+	"email": payload.email,
+	"mobile": payload.mobile
+} wait 5000]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<db:insert doc:name="Insert" doc:id="4b822d73-023d-48c6-9d9c-294306b3639e" config-ref="Database_Config" target="query1" transactionalAction="ALWAYS_JOIN">
+			<db:sql><![CDATA[insert into users(username,email,mobile) values (:username,:email,:mobile)]]></db:sql>
+			<db:input-parameters><![CDATA[#[payload]]]></db:input-parameters>
+		</db:insert>
+		<choice doc:name="Choice" doc:id="97cf78e7-0eb5-4871-8664-fb0b5f811ed6" >
+			<when expression='#[payload.mobile==87657578]'>
+				<raise-error doc:name="Raise error" doc:id="f915dc2b-0dfd-429c-b138-98d87ed9693b" type="ERROR: INVALID_MOBILE"/>
+			</when>
+		</choice>
+		<logger level="INFO" doc:name="Logger" doc:id="a9ef09f1-bafd-41ee-be96-e0691184162d" message="#['**********************inserted in main table************************']" />
+		<ee:transform doc:name="Transform Message" doc:id="93fe17c4-f946-42e2-b5e0-a7d06485de8d">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+import * from dw::Runtime
+output application/json
+---
+{
+	"username": payload.username,
+	"email": payload.email,
+	"mobile": payload.mobile
+} wait 5000]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<db:insert doc:name="Insert" doc:id="d56cff33-2688-4847-a0b2-3091edbfce11" config-ref="Database_Config" target="query2" transactionalAction="ALWAYS_JOIN">
+			<db:sql><![CDATA[insert into users_bk(username,email,mobile) values (:username,:email,:mobile)]]></db:sql>
+			<db:input-parameters><![CDATA[#[payload]]]></db:input-parameters>
+		</db:insert>
+		<logger level="INFO" doc:name="Logger" doc:id="04649475-172b-4bd7-b86b-50654ffe5e5f" message="#['**********************inserted in backup table************************']" />
+		<ee:transform doc:name="Transform Message" doc:id="f2079a79-17d3-46a4-bb17-ae84a99f1157">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"output query1":vars.query1,
+	"output query2":vars.query2
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	<flow name="http-vmFlow" doc:id="8e9fe534-671c-484c-8657-f5f992d64fb7" >
+	<http:listener doc:name="Listener" doc:id="73abe610-0956-492e-85b9-bda40eb68c0d" config-ref="HTTP_Listener_config" path="/trans"/>
+		<logger level="INFO" doc:name="Logger" doc:id="a014827a-ca9c-45fb-add7-3f1f3c295a84" message="#['inserting record into VM']"/>
+		<vm:publish doc:name="Publish" doc:id="ee116968-50d5-449e-bcbb-f9d824ab66f9" config-ref="VM_Config" sendCorrelationId="AUTO" queueName="db"/>
+	
+	
+</flow>
+	<flow name="Reliablity-flow" doc:id="abb4fc0d-218b-4b25-9712-e9fbd0c7e410" >
+		<vm:listener doc:name="Listener" doc:id="2e879813-be46-472e-90a7-b5e14271a9f4" config-ref="VM_Config" queueName="db" numberOfConsumers="1" transactionalAction="ALWAYS_BEGIN" transactionType="XA" primaryNodeOnly="true">
+			<redelivery-policy maxRedeliveryCount="3" />
+		</vm:listener>
+		<flow-ref doc:name="Flow Reference" doc:id="9aea3e47-f120-4416-a29a-b804ca4a2de5" name="business-logic" />
+		<error-handler>
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="0b23909e-7f21-4f03-af99-17fd72f040b6" type="MULE:REDELIVERY_EXHAUSTED">
+				<logger level="INFO" doc:name="Logger" doc:id="a53d74ef-fa33-4255-b377-04c3a7dc5414" message="#['Error Occured. Sending it to DLQ']"/>
+			</on-error-continue>
+		</error-handler>
+	</flow>
+</mule>

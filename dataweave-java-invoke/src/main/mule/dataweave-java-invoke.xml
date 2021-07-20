@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="3bae54f9-429e-4e24-8c4d-370bb9de250a" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="dataweave-java-invokeFlow" doc:id="36260fc5-3374-46fa-89e9-07935633a9b3" >
+		<http:listener doc:name="Listener" doc:id="75b703f3-e42e-4154-bd06-cffec4934f80" config-ref="HTTP_Listener_config" path="/java"/>
+		<ee:transform doc:name="static method call" doc:id="df2b1d78-f560-4169-9c3d-3c16bfe667ba" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+import * from java!test::StatictTest
+---
+{
+	"message":getMessage()
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="instance method call" doc:id="fa9a1342-af75-48d4-b378-ceb55f626032" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+import java!test::Person
+fun createEmployee(empName, empAge) =
+{
+name: empName,
+age: empAge
+} as Object {class: "test.Person"}
+var newEmployee = createEmployee('Raj Koothrappali2', 33)
+var empNameFromJava = Java::invoke(
+"test.Person",
+"getEmpName()",
+newEmployee)
+output application/json
+---
+{
+emp: empNameFromJava
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
