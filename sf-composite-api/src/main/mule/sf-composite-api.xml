@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:salesforce-composite="http://www.mulesoft.org/schema/mule/salesforce-composite" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce-composite http://www.mulesoft.org/schema/mule/salesforce-composite/current/mule-salesforce-composite.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<salesforce-composite:composite-config name="Salesforce_Composite_Config" doc:name="Salesforce Composite Config" doc:id="15c0bfc7-64fb-4dcc-9e77-8ed10ca97917" >
+		<salesforce-composite:oauth-jwt-connection keyStore="sf.jks" consumerKey="3MVG9fe4g9fhX0E5_jn8ff_nnpNmOOCed6i8GYU4QWhaE88YpB2lVWa16wNdzB85AwYSOrE0BHEPzyvCDK0Y_" storePassword="323232" principal="rahulkandpal@gmail.com" audienceUrl="https://login.salesforce.com"/>
+	</salesforce-composite:composite-config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="3ec917f0-a5ad-4e32-b005-ced0acc42223" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="f1bbd40e-f2c9-4678-8dc1-14b798868d85" >
+		<file:connection workingDir="C:\Users\89554773223" />
+	</file:config>
+	<flow name="sf-composite-testFlow" doc:id="bf4678d5-48fe-4b98-bf97-64ee88800141">
+		<http:listener doc:name="Listener" doc:id="64d2cddb-fb91-47cd-a9a6-142a780f1749" config-ref="HTTP_Listener_config" path="composite" />
+		<ee:transform doc:name="Transform Message" doc:id="6193701f-b214-43b7-84ec-b55170aad04b">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "allOrNone" : true,
+    "collateSubrequests" : false,
+    "compositeRequest" : [{
+        "method" : "POST",
+        "url" : "/services/data/v52.0/sobjects/Account",
+        "referenceId" : "NewAccount",
+        "body" : {  
+            "Name" : "Salesforce",
+            "BillingStreet" : "Landmark @ 1 Market Street",
+            "BillingCity" : "San Francisco",
+            "BillingState" : "California",
+             "Industry" : "Technology"
+        }
+    },{
+        "method" : "GET",
+        "referenceId" : "NewAccountInfo",
+        "url" : "/services/data/v52.0/sobjects/Account/@{NewAccount.id}"
+    },{
+        "method" : "POST",
+        "referenceId" : "NewContact",
+        "url" : "/services/data/v52.0/sobjects/Contact",
+        "body" : {  
+            "lastname" : "John Doe",
+            "Title" : "CTO of @{NewAccountInfo.Name}",
+            "MailingStreet" : "@{NewAccountInfo.BillingStreet}",
+            "MailingCity" : "@{NewAccountInfo.BillingAddress.city}",
+            "MailingState" : "@{NewAccountInfo.BillingState}",
+            "AccountId" : "@{NewAccountInfo.Id}",
+            "Email" : "jdoe@salesforce.com",
+            "Phone" : "1234567890"
+        }
+    }]
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce-composite:execute-composite-request doc:name="Execute composite request" doc:id="3ecf4a12-40ac-4f6a-aa4f-51f09ef67064" config-ref="Salesforce_Composite_Config" />
+		<ee:transform doc:name="Transform Message" doc:id="49b5d880-d109-4386-b53f-e30d5e0b2592">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="sf-composite-create-account-contact-upload-file" doc:id="4722a525-3920-4221-b613-fba038b074a5" >
+		<http:listener doc:name="Listener" doc:id="bfbda53b-2574-44f8-bec3-2a59a06301cf" config-ref="HTTP_Listener_config" path="upload/file"/>
+		<file:read doc:name="Read" doc:id="07707a30-b044-45c1-bd77-dd8a72cc3c2f" config-ref="File_Config" path='#["dummy.pdf"]' />
+		<ee:transform doc:name="Transform Message" doc:id="a6eeb2e7-f750-4b1b-a79d-376460a611d7" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="contentVersion" ><![CDATA[%dw 2.0
+import * from dw::core::Binaries
+output application/java
+---
+toBase64(payload)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<set-variable value="#[%dw 2.0 output application/json --- vars.contentVersion]" doc:name="Set Variable" doc:id="53f3eb71-88e1-4808-b782-13e82bf46367" variableName="contentVersion"/>
+		<ee:transform doc:name="Transform Message" doc:id="72e3067f-6480-4c45-b687-d4e5b294b2a7" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "allOrNone" : true,
+    "collateSubrequests" : false,
+    "compositeRequest" : [{
+        "method" : "POST",
+        "url" : "/services/data/v52.0/sobjects/Account",
+        "referenceId" : "NewAccount",
+        "body" : {  
+            "Name" : "Salesforce",
+            "BillingStreet" : "Landmark @ 1 Market Street",
+            "BillingCity" : "San Francisco",
+            "BillingState" : "California",
+             "Industry" : "Technology"
+        }
+    },{
+        "method" : "GET",
+        "referenceId" : "NewAccountInfo",
+        "url" : "/services/data/v52.0/sobjects/Account/@{NewAccount.id}"
+    },{
+        "method" : "POST",
+        "referenceId" : "NewContact",
+        "url" : "/services/data/v52.0/sobjects/Contact",
+        "body" : {  
+            "lastname" : "John Doe",
+            "Title" : "CTO of @{NewAccountInfo.Name}",
+            "MailingStreet" : "@{NewAccountInfo.BillingStreet}",
+            "MailingCity" : "@{NewAccountInfo.BillingAddress.city}",
+            "MailingState" : "@{NewAccountInfo.BillingState}",
+            "AccountId" : "@{NewAccountInfo.Id}",
+            "Email" : "jdoe@salesforce.com",
+            "Phone" : "1234567890"
+        }
+    },{
+        "method" : "POST",
+        "url" : "/services/data/v52.0/sobjects/ContentVersion",
+        "referenceId" : "refCV",
+        "body" : {
+        "Title": "dummy.pdf",
+        "PathOnClient": "dummy.pdf",
+        "VersionData": vars.contentVersion
+      }
+    },
+    {
+      "method": "GET",
+      "url": "/services/data/v52.0/sobjects/ContentVersion/@{refCV.id}",
+      "referenceId": "refCVInfo"
+    },
+    {
+      "method": "POST",
+      "url": "/services/data/v52.0/sobjects/ContentDocumentLink",
+      "referenceId": "refCDL",
+      "body": {
+        "ContentDocumentId": "@{refCVInfo.ContentDocumentId}",
+        "LinkedEntityId": "@{NewAccountInfo.Id}",
+        "Visibility": "AllUsers"
+      }
+    }]
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce-composite:execute-composite-request doc:name="Execute composite request" doc:id="2f6fa22d-4ef9-4ef5-ad4d-6801c9eaef20" config-ref="Salesforce_Composite_Config"/>
+		<ee:transform doc:name="Transform Message" doc:id="4c748ab4-1b2f-4162-8665-74e036fcee3f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="Copy_of_sf-composite-testFlow" doc:id="dc4a5051-aed0-4bca-bbf8-4f7bf0c01a20" >
+		<http:listener doc:name="Copy_of_Listener" doc:id="08cad80a-cbdb-4e24-8213-e776bd8f636f" config-ref="HTTP_Listener_config" path="composite/post" />
+		<salesforce-composite:execute-composite-request doc:name="Copy_of_Execute composite request" doc:id="e7ab9a97-d99e-4529-bcc7-8e4bf3a8e9ef" config-ref="Salesforce_Composite_Config" />
+		<ee:transform doc:name="Copy_of_Transform Message" doc:id="e95715aa-7938-4136-9cc4-5dda57da0617" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
