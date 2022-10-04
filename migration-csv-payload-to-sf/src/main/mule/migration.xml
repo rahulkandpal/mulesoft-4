@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="a9bd28db-036d-4f30-a5ea-90cd32c1ba6f" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="b9d9a95e-b3b8-4a6d-b5e8-b5f2880e9267" >
+		<file:connection workingDir="${file.path}" />
+	</file:config>
+	<configuration-properties doc:name="Configuration properties" doc:id="5b6daba2-7a5d-46fa-8308-d287e1ffa1e2" file="config.yaml" />
+	<flow name="reading-from-unprocessed-folder" doc:id="05c7e3b0-9c27-43c8-82ad-4402c9f1ada0" >
+		<http:listener doc:name="Listener" doc:id="8a80ce3b-c079-4835-9270-f10de1ca0392" config-ref="HTTP_Listener_config" path="/bulk/load"/>
+	<logger level="INFO" doc:name="BEGIN : Processing" doc:id="a6303d85-1eb3-4bd7-ac18-683e308556e1" message="#['BEGIN : Files Processing']" />
+		<set-variable value='#[now() as Date {format : "MM/dd/yyyy"}]' doc:name="date" doc:id="cfe82eca-782b-4484-8fce-960682fa4f5f" variableName="date"/>
+		<file:list doc:name="Read csv files" doc:id="a5d93c9c-3c4e-458f-8cde-9fa9deed62ea" config-ref="File_Config" directoryPath="unprocessed">
+			<file:matcher filenamePattern="*.csv"/>
+		</file:list>
+		<foreach doc:name="foreach - SF object name folder creation" doc:id="85062462-0f2d-4b08-80ee-1cb527fa3cce" collection='#[payload[0 to 0] default []]'>
+			<set-variable value="#[attributes.fileName]" doc:name="filename" doc:id="b6123576-3bfe-4d59-a2de-811881c351aa" variableName="filename"/>
+			<logger level="INFO" doc:name="Processing file" doc:id="2e60fbcc-42ef-4420-9e39-4995835dc618" message="#['Processing file : ' ++ vars.filename default &quot;&quot;]"/>
+			<set-variable value='#[import * from dw::core::Strings
+output application/json
+---
+substringBefore(vars.filename,".csv") splitBy  "-"]' doc:name="fileMetaData" doc:id="4e941694-c70c-48ed-b4a3-329331aea0a3" variableName="fileMetaData"/>
+			<logger level="INFO" doc:name="BEGIN : SF Upload" doc:id="4ecc9bd1-3d51-42d0-af73-1d0e93019035" message="#['BEGIN : Salesforce Upload']"/>
+			<set-variable value="#[uuid()]" doc:name="jobId" doc:id="7f7c61f1-a5d0-4957-8a60-6ddec78c1f1b" variableName="jobId"/>
+			<logger level="INFO" doc:name="END : SF Upload" doc:id="fa89a1b7-c13c-4556-afe1-120e0d0c6304" message="#['END : Salesforce Upload']"/>
+			<file:write doc:name="SF Job details" doc:id="3da1e542-4623-4c41-ae0d-669241fb9904" config-ref="File_Config" path="#[vars.fileMetaData[0] ++ '/' ++ vars.date ++ '/bulkV2job/unprocessed/' ++ vars.jobId default &quot;&quot; ++ vars.filename default &quot;&quot;]" mode="CREATE_NEW">
+				<file:content ><![CDATA[#[output application/csv
+---
+{
+	"fileName" : vars.filename,
+	"jobId" : vars.jobId,
+	"object" : vars.fileMetaData[0]
+}]]]></file:content>
+			</file:write>
+			<file:move doc:name="Move Original file" doc:id="18d1f4bb-9422-47c6-82e7-4b5216d2d1b4" config-ref="File_Config" sourcePath='#["unprocessed/" ++ vars.filename]' targetPath="#[vars.fileMetaData[0] ++ '/' ++ vars.date ++ &quot;/processed/&quot;]" renameTo="#['sf_id_' ++ vars.jobId default &quot;&quot; ++ &quot;_&quot; ++ vars.filename default &quot;&quot;]"/>
+		</foreach>
+		<logger level="INFO" doc:name="END : Processing" doc:id="be1d97b0-7f92-4f5c-9dc3-af7e9ab694d9" message="#['END : Files Processing']"/>
+		
+	</flow>
+	<flow name="read-files-datewise-subfolders" doc:id="3e250924-965d-4f4a-a011-3d63913fc336" >
+		<http:listener doc:name="Listener" doc:id="3340924b-93e7-498e-87f3-8644c3fc42ef" config-ref="HTTP_Listener_config" path="/bulk/result"/>
+		<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;(now()) as Date]" doc:name="date" doc:id="241031f0-6d41-4935-b093-a6d232aae6e6" variableName="date"/>
+		<file:list doc:name="List" doc:id="bc816cd7-e152-4a4a-8dde-68aedcc5e53a" config-ref="File_Config" directoryPath="#['']" recursive="true">
+			<file:matcher filenamePattern="*.csv" pathPattern="#['${file.path}/*/' ++ vars.date ++ '/bulkV2job/unprocessed/*.csv']"/>
+		</file:list>
+		<foreach doc:name="For Each - get status of SF job and create summary file" doc:id="2fd0f802-7107-4892-9682-498b59e893a4" collection="#[payload[0 to 0] default []]">
+			<logger level="INFO" doc:name="Logger" doc:id="0874b08f-26e8-4f2e-8be1-7f91207ed822" message="#[payload.fileName]"/>
+		</foreach>
+	</flow>
+</mule>
