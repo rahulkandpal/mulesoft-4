@@ -1,0 +1,17 @@
+{
+    "OPENAI": {
+        "OPENAI_API_KEY": "YOUR_OPENAI_API_KEY"
+    },
+    "MISTRAL_AI": {
+        "MISTRAL_AI_API_KEY": "YOUR_MISTRAL_AI_API_KEY"
+    },
+    "OLLAMA": {
+        "OLLAMA_BASE_URL": "http://baseurl.ollama.com"
+    },
+    "GROQAI_OPENAI": {
+        "GROQ_API_KEY": "YOUR_MISTRAL_AI_API_KEY"
+    },
+    "ANTHROPIC": {
+        "ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY"
+    }
+}

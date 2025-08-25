@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:ms-aichain="http://www.mulesoft.org/schema/mule/ms-aichain"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ms-aichain http://www.mulesoft.org/schema/mule/ms-aichain/current/mule-ms-aichain.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="add-pdf-data-to-embedding" doc:id="aa9f706c-11b8-43e5-a0ff-b2bf7475da0d">
+		<http:listener doc:name="Listener" doc:id="4475d9b0-0016-4caa-8477-3ee273bfb986" config-ref="HTTP_Listener_config" path="/insertData" />
+		<ms-aichain:embedding-new-store doc:name="Embedding new store" doc:id="4e8b3fea-7004-452a-b22d-cd249794b80f" storeName="#['/Users/rkandpal/personal/AI/wms']" />
+		<ms-aichain:embedding-add-folder-to-store doc:name="Embedding add folder to store" doc:id="670271cf-80d0-4196-acec-ce6091e7b55b" storeName="#['/Users/rkandpal/personal/AI/wms']" fileType="any" contextPath="#['/Users/rkandpal/personal/BY/product setup/4603_WMS_Product_Setup_Lesson_01_v2020.1.pdf']" maxSegmentSizeInChars="#[200000]" maxOverlapSizeInChars="#[2000]" />
+		<ee:transform doc:name="Transform Message" doc:id="cdc85314-c8cf-4dd7-abeb-af7c042baeb0">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"msg" : "file added to embedding",
+	"payload" : payload
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler>
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="5a1aafa4-b499-4ba1-b4e7-2e525bd90ddb">
+				<ee:transform doc:name="Transform Message" doc:id="63e8c28d-fd95-420e-a5b0-b9c5502dddf4">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+error]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-continue>
+		</error-handler>
+	</flow>
+	<flow name="ask-agentFlow" doc:id="09e9bfc4-f9c4-427c-a959-ba37c217c948">
+		<http:listener doc:name="Listener" doc:id="f9b2abc6-beb8-4317-a7dc-bfcdc95a4794" config-ref="HTTP_Listener_config" path="/ask-doc-agent" />
+		<logger level="INFO" doc:name="Logger" doc:id="09716d78-4fef-47ed-9ea7-6e4d00853da0" message='#[mule.home ++ "/apps/" ++ app.name ++ "/envVars.json"]' />
+		<set-variable value="#[payload.prompt]" doc:name="prompt" doc:id="28d973d1-1fa4-41c2-832c-99ecced8fda0" variableName="prompt" />
+		<!-- [STUDIO:"Chat answer prompt with memory"]<ms-aichain:chat-answer-prompt-with-memory doc:name="Chat answer prompt with memory" doc:id="2837b8b9-4f9f-4007-bf5d-52830084b9b9" config-ref="LLM_Config" memoryName="#['TestPromptMemory'&#93;" dbFilePath="#['/Users/rkandpal/personal/AI/promptMemory'&#93;" maxMessages="#[4&#93;">
+			<ms-aichain:data><![CDATA[#["When user submit a request regarding WMS ,clarify and refine it to make the intent more precise. Provide only the correct version of the prompt."
+++ payload.prompt&#93;&#93;&#93;></ms-aichain:data>
+		</ms-aichain:chat-answer-prompt-with-memory> [STUDIO] -->
+		<ms-aichain:embedding-query-from-store doc:name="Embedding query from store" doc:id="79932f3f-b39c-42d7-8286-d46b5b8519ce" maxResults="2" minScore="0.2" getLatest="true" storeName="#['/Users/rkandpal/personal/AI/wms']">
+			<ms-aichain:question><![CDATA[#[vars.prompt]]]></ms-aichain:question>
+		</ms-aichain:embedding-query-from-store>
+		<ee:transform doc:name="Transform Message" doc:id="d28e00a0-926f-4576-9a27-4d95ab187ea4">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"dataset" : payload.sources map ((item, index) ->  item.textSegment) joinBy  "\n"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ms-aichain:agent-define-prompt-template doc:name="Agent define prompt template" doc:id="73778ba5-9745-4b83-976f-b6591235343b" config-ref="LLM_Config">
+			<ms-aichain:dataset><![CDATA[#[payload.dataset]]]></ms-aichain:dataset>
+			<ms-aichain:template><![CDATA[You are a helpful chatbot specializing in Blue Yonder WMS operations Only.
+
+Your primary source of information is the provided Blue Yonder WMS documentation.
+
+When answering questions about warehouse operations (e.g., configuring warehouses, inbound processes, outbound processes), you MUST provide the specific steps and details ONLY from the provided documentation.
+
+You may use general WMS understanding to:
+- Simplify explanations.
+- Provide relevant examples.
+- Clarify concepts.
+
+However, the actionable steps or configurations must always directly reference the provided documentation. If the information is not in the documents, state that you cannot find the specific details in your knowledge base.
+
+only If you find the answer create a response in JSON object structure with clear steps like {"step1" : "","step2":""}.  Remove the sepecial characters. provide a clean and valid json response.
+
+If no answer mention "beyond my scope"
+
+When you encounter questions about ER diagrams, table names, or UI screenshots (once they are added), you should aim to describe the relevant elements, their relationships, or the visual information presented.]]></ms-aichain:template>
+			<ms-aichain:instructions><![CDATA[#[vars.prompt]]]></ms-aichain:instructions>
+		</ms-aichain:agent-define-prompt-template>
+		<ee:transform doc:name="Transform Message" doc:id="48f89cfd-f448-4a3b-a26a-32a0640b76ba">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+if(payload.response ~= "beyond my scope")
+payload
+else
+read(payload.response,"application/json")]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler>
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="f93f6113-596f-4855-9464-3660683afe5f">
+				<ee:transform doc:name="Transform Message" doc:id="d49deebc-2c34-4abe-b870-450bd1af3dc6">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+error]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-continue>
+		</error-handler>
+	</flow>
+</mule>
