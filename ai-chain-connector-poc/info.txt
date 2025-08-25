@@ -1,0 +1,51 @@
+
+1. First run the insert data endpoint
+
+curl --location 'localhost:8081/insertData'
+
+2. Run this endpoint Request after adding the PDF doc to embedding using above request
+----------------
+
+curl --location 'localhost:8081/ask-doc-agent' \
+--header 'Content-Type: application/json' \
+--data '{
+    "prompt" : "How do i create role. Give steps"
+}'
+
+
+
+response
+---------
+
+{
+  "prerequisites": [
+    "Role name (identifier)",
+    "Role description",
+    "Parent role name",
+    "Number of roles (for reference)"
+  ],
+  "step1": "In the menu structure list, click the SYSTEM ADMINISTRATOR menu structure.",
+  "step2": "Expand the Authorization page.",
+  "step3": "Click the Roles subpage. The Roles page is displayed.",
+  "step4": "Click Add to add a new role. The Add Role page is displayed.",
+  "step5": "In the Role box, type the identifier for the role.",
+  "step6": "In the Description box, type a description for the role.",
+  "step7": "In the Parent Role list, click the role that the new role aligns to.",
+  "step8": "Click the Enabled toggle button to activate the role.",
+  "step9": "Click the Users button. The Assign Users page is displayed.",
+  "step10": "Select a user (if desired) and click Apply to assign the user to the role.",
+  "step11": "In the AUTHORIZATIONS section, click an option type in the Option Types list (e.g., Directed Operation, RF Screens, Reports, Privileges, MOCA Web Services, Custom Permissions).",
+  "step12": "In the Available Options section on the left, click the required option to grant that permission.",
+  "step13": "Click Save. The newly created role is now available on the Roles page."
+}
+
+{
+    "prompt" : "How do i edit configure warehouse. Give steps"
+}
+
+{
+    "step1": "Click the Edit Warehouse link on the Warehouse page",
+    "step2": "The Edit Warehouse <<Warehouse Name>> page is displayed. Edit details such as warehouse description and address",
+    "step3": "In the OPTIONAL SETTINGS section, edit the boxes and lists to specify the required warehouse details",
+    "step4": "Click Save to complete the editing process"
+}
