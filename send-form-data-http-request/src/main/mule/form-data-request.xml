@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<os:config name="ObjectStore_Config" doc:name="ObjectStore Config" doc:id="226657a6-ba7f-4000-82f0-705e71c4f8b6" />
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="8a4ebc11-2197-4f42-9267-13e2fe1d418d" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="3bc736c9-6f67-4aee-ac1d-2c4ed30abce1" >
+		<file:connection workingDir="/Users/rkandpal/Downloads" />
+	</file:config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="e0919147-7153-45e8-b277-25a09fa60e8e" >
+		<http:request-connection host="localhost" port="8081" />
+	</http:request-config>
+	<flow name="testFlow" doc:id="54005431-793c-4399-a3c6-96994e7e8d93" >
+		<http:listener doc:name="Listener" doc:id="936db070-d797-4e76-a5dd-8422795fc46c" config-ref="HTTP_Listener_config" path="trigger"/>
+		<file:read doc:name="Read" doc:id="c556fcc2-dd8a-468e-b0c2-0974e03c33e9" config-ref="File_Config" path='#["Rahul.pdf"]'/>
+		<ee:transform doc:name="Transform Message" doc:id="271b6226-d18f-44a5-90a8-4a07fe0418e3" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0   
+output multipart/form-data
+---
+{
+	"parts": {
+		"Key1": {
+			"headers": {
+				"Content-Disposition": {
+					"name": "Key1",
+					"subtype": "form-data"
+				}
+			},
+			"content": "true"
+		},
+		"File1": {
+			"headers": {
+				"Content-Disposition": {
+					"name": "File1",
+					"filename": "Rahul.pdf",
+					"subtype": "form-data"
+				},
+				"Content-Type": "application/pdf"
+			},
+			"content": payload
+		}
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<http:request method="POST" doc:name="Request" doc:id="3400fae9-03b9-4ad6-af74-018ba1ffdb1d" config-ref="HTTP_Request_configuration" path="/pdf">
+		</http:request>
+		<ee:transform doc:name="Transform Message" doc:id="80be0320-98e2-455b-a044-249df91d37fe" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="testFlow1" doc:id="271557d7-526e-4f3d-bbe2-ac423c9f7706" >
+		<http:listener doc:name="Listener" doc:id="97297cbb-8f3c-4e9a-909c-34543b9efcce" config-ref="HTTP_Listener_config" path="/pdf" allowedMethods="POST"/>
+		<file:write doc:name="Write" doc:id="1b5812e3-2bb2-49e5-9dbb-2ad2f0bea8be" config-ref="File_Config" path='#["Rahul-cpy.pdf"]'/>
+		<ee:transform doc:name="Transform Message" doc:id="c643d8e3-c7e2-4c18-9501-b2e65c550f9d" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"appid" : uuid(),
+	"msg" : "process complete"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
